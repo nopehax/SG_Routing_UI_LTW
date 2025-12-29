@@ -1,0 +1,343 @@
+:root {
+    --bg: #f4f6fb;
+    --panel: #ffffff;
+    --card: #f7f9fc;
+    --text: #1f2933;
+    --muted: #5f6b7a;
+    --border: rgba(31, 41, 51, 0.15);
+    --error: #c62828;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.layout {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+}
+
+.panel {
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+    overflow: auto;
+}
+
+.main {
+    height: 100%;
+    position: relative;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.title {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.pill {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-weight: 600;
+}
+
+.pill.ok {
+    background: rgba(46, 125, 50, 0.12);
+    border-color: rgba(46, 125, 50, 0.4);
+    color: #2e7d32;
+}
+
+.pill.warn {
+    background: rgba(245, 159, 0, 0.15);
+    border-color: rgba(245, 159, 0, 0.45);
+    color: #b76a00;
+}
+
+.pill.error {
+    background: rgba(198, 40, 40, 0.12);
+    border-color: rgba(198, 40, 40, 0.45);
+    color: #c62828;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.cardTitle {
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.modeButtons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.modeButtons button {
+    height: 42px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modeButtons svg {
+    width: 20px;
+    height: 20px;
+}
+
+.subtle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+select,
+input {
+    width: 100%;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    outline: none;
+}
+
+input[type="checkbox"] {
+    width: auto;
+}
+
+button {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #f1f4f8;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.primary {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 12px;
+    font-weight: 700;
+}
+
+button.active {
+    outline: 2px solid rgba(31, 41, 51, 0.2);
+}
+
+.ptActions .danger {
+    border-color: rgba(198, 40, 40, 0.5);
+    color: #c62828;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.ptActions .danger:hover {
+    background: rgba(198, 40, 40, 0.08);
+}
+
+.ptActions .danger svg {
+    width: 14px;
+    height: 14px;
+}
+
+.ptBlock {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.ptRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ptActions {
+    display: flex;
+    gap: 8px;
+}
+
+.smallList {
+    margin-top: 10px;
+}
+
+.smallListTitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+}
+
+.toggleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+}
+
+.iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+    background: transparent;
+}
+
+.iconButton svg {
+    width: 14px;
+    height: 14px;
+}
+
+.iconButton.danger {
+    border-color: rgba(198, 40, 40, 0.6);
+    color: #c62828;
+}
+
+.iconButton.danger:hover {
+    background: rgba(198, 40, 40, 0.08);
+}
+
+.errorBox {
+    border: 1px solid rgba(255, 90, 106, 0.35);
+    background: rgba(255, 90, 106, 0.12);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+.footerNote {
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.mapWrap {
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.map {
+    height: 100%;
+    width: 100%;
+}
+
+.mapHint {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    pointer-events: none;
+}
+
+.blockageDetail {
+    position: absolute;
+    transform: translate(-50%, -110%);
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    max-width: 240px;
+    pointer-events: none;
+    z-index: 600;
+}
+
+.blockageTitle {
+    font-weight: 700;
+}
+
+.blockageDesc {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.mapStyleToggle {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 700;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mapStyleToggle svg {
+    width: 16px;
+    height: 16px;
+}

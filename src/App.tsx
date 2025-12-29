@@ -1,0 +1,447 @@
+import { useEffect, useMemo, useState } from "react";
+import MapView from "./components/MapView";
+import SidePanel from "./components/SidePanel";
+import type { GeoJson, Point, ReadyState, TravelMode } from "./types";
+import { MODE_TO_AXIS_TYPES } from "./presets";
+import {
+  addBlockage,
+  changeValidRoadTypes,
+  deleteBlockage,
+  getBlockages,
+  getReady,
+  getRoute,
+  getValidAxisTypes,
+} from "./api";
+
+type PickMode = "blockage" | null;
+
+function stopLabel(index: number): string {
+  const base = "A".charCodeAt(0);
+  return String.fromCharCode(base + index);
+}
+
+function extractBlockageNames(blockages: any): string[] {
+  // Expect FeatureCollection with features[*].properties.name (best guess)
+  const features = blockages?.features;
+  if (!Array.isArray(features)) return [];
+  const names = features
+    .map((f) => f?.properties?.name ?? f?.properties?.blockage_name ?? f?.properties?.id ?? null)
+    .filter((x) => typeof x === "string" && x.trim().length > 0)
+    .map((x) => x.trim());
+
+  // unique
+  return Array.from(new Set(names));
+}
+
+function isValidGeoJson(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  const type = data.type;
+  const geometryTypes = new Set([
+    "Point",
+    "MultiPoint",
+    "LineString",
+    "MultiLineString",
+    "Polygon",
+    "MultiPolygon",
+    "GeometryCollection",
+  ]);
+
+  if (type === "FeatureCollection") {
+    return Array.isArray(data.features);
+  }
+
+  if (type === "Feature") {
+    return !!data.geometry && geometryTypes.has(data.geometry.type);
+  }
+
+  return geometryTypes.has(type);
+}
+
+function parseBlockageRadiusMeters(props: any): number | null {
+  const raw = props?.["distance (meters)"] ?? null;
+
+  if (raw == null) return null;
+  const radius = typeof raw === "string" ? Number(raw.replace(/[^0-9.]/g, "")) : Number(raw);
+  return Number.isFinite(radius) ? radius : null;
+}
+
+function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const r = 6371000;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLng = ((bLng - aLng) * Math.PI) / 180;
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const a = sinLat * sinLat + Math.cos((aLat * Math.PI) / 180) * Math.cos((bLat * Math.PI) / 180) * sinLng * sinLng;
+  return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+function isPointInsideBlockage(point: Point | null, blockages: GeoJson | null): boolean {
+  if (!point || !blockages) return false;
+
+  const asAny = blockages as any;
+  const type = asAny?.type;
+  const features = type === "FeatureCollection" && Array.isArray(asAny.features)
+    ? asAny.features
+    : type === "Feature"
+      ? [asAny]
+      : [];
+
+  for (const feature of features) {
+    const geomType = feature?.geometry?.type;
+    if (geomType !== "Point") continue;
+    const coords = feature?.geometry?.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) continue;
+    const [lng, lat] = coords;
+    const radius = parseBlockageRadiusMeters(feature?.properties);
+    if (!radius) continue;
+    const d = distanceMeters(point.lat, point.long, lat, lng);
+    if (d <= radius) return true;
+  }
+
+  return false;
+}
+
+export default function App() {
+  const [ready, setReady] = useState<ReadyState>("Unknown");
+
+  const [mode, setMode] = useState<TravelMode>("car");
+  const presetAxisTypes = useMemo(() => MODE_TO_AXIS_TYPES[mode], [mode]);
+
+  const [activeAxisTypes, setActiveAxisTypes] = useState<string[]>([]);
+  const [applyingPreset, setApplyingPreset] = useState(false);
+
+  const [pickMode, setPickMode] = useState<PickMode>(null);
+  const [pickStopIndex, setPickStopIndex] = useState<number | null>(null);
+
+  const [stops, setStops] = useState<Array<Point | null>>([null, null]);
+
+  const [routes, setRoutes] = useState<GeoJson[]>([]);
+  const [routing, setRouting] = useState(false);
+
+  const [showBlockages, setShowBlockages] = useState(true);
+  const [blockages, setBlockages] = useState<GeoJson | null>(null);
+
+  const [blockagePoint, setBlockagePoint] = useState<{ lat: number; long: number } | null>(null);
+  const [blockageName, setBlockageName] = useState("");
+  const [blockageDesc, setBlockageDesc] = useState("");
+  const [blockageRadius, setBlockageRadius] = useState(200);
+  const [deletingBlockageName, setDeletingBlockageName] = useState<string | null>(null);
+
+  const blockageNames = useMemo(() => extractBlockageNames(blockages), [blockages]);
+
+  const [error, setError] = useState<string | null>(null);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const blockageError = useMemo(() => {
+    for (let i = 0; i < stops.length; i += 1) {
+      if (isPointInsideBlockage(stops[i], blockages)) {
+        return `Stop ${stopLabel(i)} is inside a blockage.`;
+      }
+    }
+    return null;
+  }, [stops, blockages]);
+  const panelError = [error, blockageError].filter(Boolean).join(" ") || null;
+
+  // Poll /ready
+  useEffect(() => {
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const r = await getReady();
+        if (!cancelled) setReady(r);
+      } catch {
+        if (!cancelled) setReady("Unknown");
+      }
+    }
+
+    tick();
+    const id = window.setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  // Load server axis types once (optional)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const v = await getValidAxisTypes();
+        if (!cancelled) setActiveAxisTypes(v);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Apply preset when ready + mode changes
+  useEffect(() => {
+    let cancelled = false;
+    if (ready !== "Ready") return;
+
+    (async () => {
+      setApplyingPreset(true);
+      setError(null);
+      setRoutes([]); // clear stale routes when mode changes
+      try {
+        const v = await changeValidRoadTypes(presetAxisTypes);
+        if (!cancelled) setActiveAxisTypes(v);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to apply travel mode preset.");
+      } finally {
+        if (!cancelled) setApplyingPreset(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, mode, presetAxisTypes]);
+
+  async function refreshBlockages() {
+    const g = await getBlockages();
+    setBlockages(g);
+  }
+
+  // Fetch blockages on toggle to refresh overlay/list
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const g = await getBlockages();
+        if (!cancelled) setBlockages(g);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load blockages.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showBlockages]);
+
+  function onPick(lat: number, lng: number) {
+    setError(null);
+
+    if (pickStopIndex != null) {
+      setStops((prev) => {
+        const next = [...prev];
+        next[pickStopIndex] = { lat, long: lng };
+        return next;
+      });
+      setRoutes([]);
+      setRouteError(null);
+      setPickStopIndex(null);
+      return;
+    }
+
+    if (pickMode === "blockage") {
+      setBlockagePoint({ lat, long: lng });
+      setPickMode(null);
+      return;
+    }
+  }
+
+  function onSetPickMode(next: PickMode) {
+    setPickMode(next);
+    if (next) setPickStopIndex(null);
+  }
+
+  function onPickStop(index: number) {
+    if (pickStopIndex === index) {
+      setPickStopIndex(null);
+      return;
+    }
+
+    setPickStopIndex(index);
+    setPickMode(null);
+    setStops((prev) => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+    setRoutes([]);
+    setRouteError(null);
+  }
+
+  function onAddStop() {
+    setStops((prev) => [...prev, null]);
+    setRoutes([]);
+    setRouteError(null);
+  }
+
+  function onDeleteStop(index: number) {
+    setStops((prev) => {
+      if (prev.length <= 2) {
+        const next = [...prev];
+        next[index] = null;
+        return next;
+      }
+
+      return prev.filter((_, i) => i !== index);
+    });
+    setRoutes([]);
+    setRouteError(null);
+    setPickStopIndex((prev) => {
+      if (prev == null) return prev;
+      if (prev === index) return null;
+      return prev > index ? prev - 1 : prev;
+    });
+  }
+
+  function onClearStops() {
+    setStops([null, null]);
+    setRoutes([]);
+    setRouteError(null);
+    setPickStopIndex(null);
+  }
+
+  async function onGetRoute() {
+    const allStopsSet = stops.every(Boolean);
+    if (!allStopsSet) return;
+    if (ready !== "Ready") return;
+    if (blockageError) return;
+
+    setRouting(true);
+    setError(null);
+    setRouteError(null);
+    setRoutes([]);
+    try {
+      // Ensure preset is applied (in case user clicked quickly)
+      if (activeAxisTypes.join("|") !== presetAxisTypes.join("|")) {
+        setApplyingPreset(true);
+        const v = await changeValidRoadTypes(presetAxisTypes);
+        setActiveAxisTypes(v);
+        setApplyingPreset(false);
+      }
+
+      for (let i = 0; i < stops.length - 1; i += 1) {
+        const startPt = stops[i];
+        const endPt = stops[i + 1];
+        if (!startPt || !endPt) continue;
+
+        const geo = await getRoute({
+          startPt,
+          endPt,
+        });
+        if (!isValidGeoJson(geo)) {
+          setRouteError(`Route segment ${stopLabel(i)} → ${stopLabel(i + 1)} is invalid.`);
+          break;
+        }
+
+        setRoutes((prev) => [...prev, geo]);
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "Routing failed.");
+    } finally {
+      setRouting(false);
+    }
+  }
+
+  function onSwap() {
+    setStops((prev) => {
+      if (prev.length !== 2) return prev;
+      return [prev[1], prev[0]];
+    });
+    setRoutes([]);
+    setRouteError(null);
+  }
+
+  async function onAddBlockage() {
+    if (!blockagePoint) return;
+    if (ready !== "Ready") return;
+    if (blockageName.trim().length === 0) return;
+
+    setError(null);
+    try {
+      await addBlockage({
+        point: { lat: blockagePoint.lat, long: blockagePoint.long },
+        radius: blockageRadius,
+        name: blockageName.trim(),
+        description: blockageDesc.trim(),
+      });
+
+      // refresh list + overlay
+      await refreshBlockages();
+
+      // reset
+      setBlockagePoint(null);
+      setBlockageName("");
+      setBlockageDesc("");
+      setBlockageRadius(200);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to add blockage.");
+    }
+  }
+
+  async function onDeleteBlockage(name: string) {
+    if (ready !== "Ready") return;
+
+    setError(null);
+    setDeletingBlockageName(name);
+    try {
+      await deleteBlockage(name);
+      await refreshBlockages();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to delete blockage.");
+    } finally {
+      setDeletingBlockageName(null);
+    }
+  }
+
+  return (
+    <div className="layout">
+      <SidePanel
+        ready={ready}
+        mode={mode}
+        onModeChange={(m) => setMode(m)}
+        stops={stops}
+        pickStopIndex={pickStopIndex}
+        onPickStop={onPickStop}
+        onAddStop={onAddStop}
+        onDeleteStop={onDeleteStop}
+        onClearStops={onClearStops}
+        onSwap={onSwap}
+        pickMode={pickMode}
+        setPickMode={onSetPickMode}
+        applyingPreset={applyingPreset}
+        routing={routing}
+        onGetRoute={onGetRoute}
+        routeBlocked={!!blockageError}
+        routeBlockedReason={blockageError}
+        routeError={routeError}
+        showBlockages={showBlockages}
+        onToggleBlockages={() => setShowBlockages((s) => !s)}
+        blockagePoint={blockagePoint}
+        blockageName={blockageName}
+        blockageDesc={blockageDesc}
+        blockageRadius={blockageRadius}
+        setBlockageName={setBlockageName}
+        setBlockageDesc={setBlockageDesc}
+        setBlockageRadius={setBlockageRadius}
+        clearBlockagePoint={() => setBlockagePoint(null)}
+        onAddBlockage={onAddBlockage}
+        blockageNames={blockageNames}
+        deletingBlockageName={deletingBlockageName}
+        onDeleteBlockage={onDeleteBlockage}
+        error={panelError}
+      />
+
+      <main className="main">
+        <MapView
+          stops={stops}
+          routes={routes}
+          blockages={blockages}
+          showBlockages={showBlockages}
+          pickMode={pickMode ? "blockage" : pickStopIndex != null ? `stop ${stopLabel(pickStopIndex)}` : null}
+          onPick={onPick}
+        />
+      </main>
+    </div>
+  );
+}
