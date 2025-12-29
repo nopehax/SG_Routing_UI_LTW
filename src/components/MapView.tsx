@@ -106,6 +106,7 @@ export default function MapView(props: {
     routes: GeoJson[];
     blockages: GeoJson | null;
     showBlockages: boolean;
+    blockagePoint: { lat: number; long: number } | null;
     pickMode: PickMode;
     onPick: (lat: number, lng: number) => void;
 }) {
@@ -288,6 +289,13 @@ export default function MapView(props: {
                             </Tooltip>
                         </Marker>
                     ) : null
+                )}
+
+                {props.blockagePoint && (
+                    <Marker
+                        key="blockage-preview"
+                        position={[props.blockagePoint.lat, props.blockagePoint.long]}
+                    />
                 )}
 
                 {routeDisplays.length > 0 && <FitBoundsOnGeoJson data={routeDisplays[routeDisplays.length - 1]} />}

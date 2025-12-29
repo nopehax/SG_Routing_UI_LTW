@@ -484,6 +484,7 @@ export default function App() {
           routes={routes}
           blockages={blockages}
           showBlockages={showBlockages}
+          blockagePoint={blockagePoint}
           pickMode={pickMode ? "blockage" : pickStopIndex != null ? `stop ${stopLabel(pickStopIndex)}` : null}
           onPick={onPick}
         />
