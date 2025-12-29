@@ -57,6 +57,26 @@ function isValidGeoJson(data: any): boolean {
   return geometryTypes.has(type);
 }
 
+function hasRouteGeometry(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  const type = data.type;
+  const hasLineOrPolygon = (geomType: string | undefined) =>
+    geomType === "LineString" ||
+    geomType === "MultiLineString" ||
+    geomType === "Polygon" ||
+    geomType === "MultiPolygon";
+
+  if (type === "FeatureCollection" && Array.isArray(data.features)) {
+    return data.features.some((f: any) => hasLineOrPolygon(f?.geometry?.type));
+  }
+
+  if (type === "Feature") {
+    return hasLineOrPolygon(data?.geometry?.type);
+  }
+
+  return hasLineOrPolygon(type);
+}
+
 function parseBlockageRadiusMeters(props: any): number | null {
   const raw = props?.["distance (meters)"] ?? null;
 
@@ -331,6 +351,10 @@ export default function App() {
         });
         if (!isValidGeoJson(geo)) {
           setRouteError(`Route segment ${stopLabel(i)} → ${stopLabel(i + 1)} is invalid.`);
+          break;
+        }
+        if (!hasRouteGeometry(geo)) {
+          setRouteError("Route not found.");
           break;
         }
 
