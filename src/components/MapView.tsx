@@ -1,7 +1,8 @@
-import { CircleMarker, GeoJSON, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { GeoJson, Point } from "../types";
 import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 type PickMode = string | null;
 
@@ -85,6 +86,21 @@ function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number):
     return 2 * r * Math.asin(Math.sqrt(a));
 }
 
+function createColoredMarkerIcon(color: string): L.Icon {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41"><path d="M12.5 0C5.6 0 0 5.6 0 12.5C0 24 12.5 41 12.5 41S25 24 25 12.5C25 5.6 19.4 0 12.5 0Z" fill="${color}" stroke="#2a2a2a" stroke-width="1"/><circle cx="12.5" cy="13" r="4.5" fill="#ffffff"/></svg>`;
+    const iconUrl = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+
+    return L.icon({
+        iconUrl,
+        shadowUrl: markerShadow,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+        shadowAnchor: [12, 41],
+    });
+}
+
 export default function MapView(props: {
     stops: Array<Point | null>;
     routes: GeoJson[];
@@ -123,6 +139,10 @@ export default function MapView(props: {
     const routeColors = useMemo(
         () => ["#1f78b4", "#33a02c", "#ff7f00", "#6a3d9a", "#e31a1c", "#b15928"],
         []
+    );
+    const markerIcons = useMemo(
+        () => routeColors.map((color) => createColoredMarkerIcon(color)),
+        [routeColors]
     );
 
     const blockagePolygonStyle = useMemo(
@@ -252,21 +272,21 @@ export default function MapView(props: {
 
                 {props.stops.map((stop, index) =>
                     stop ? (
-                        <CircleMarker
+                        <Marker
                             key={`stop-${index}`}
-                            center={[stop.lat, stop.long]}
-                            radius={8}
-                            pathOptions={{
-                                color: routeColors[index % routeColors.length],
-                                fillColor: routeColors[index % routeColors.length],
-                                fillOpacity: 0.9,
-                                weight: 2,
-                            }}
+                            position={[stop.lat, stop.long]}
+                            icon={
+                                markerIcons[
+                                    index < props.stops.length - 1
+                                        ? index % markerIcons.length
+                                        : Math.max(0, index - 1) % markerIcons.length
+                                ]
+                            }
                         >
-                            <Tooltip permanent direction="top" offset={[0, -10]}>
+                            <Tooltip permanent direction="top" offset={[0, -14]}>
                                 {String.fromCharCode("A".charCodeAt(0) + index)}
                             </Tooltip>
-                        </CircleMarker>
+                        </Marker>
                     ) : null
                 )}
 
