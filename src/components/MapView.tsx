@@ -1,4 +1,4 @@
-import { GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { GeoJson, Point } from "../types";
 import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
@@ -254,11 +254,21 @@ export default function MapView(props: {
 
                 {props.stops.map((stop, index) =>
                     stop ? (
-                        <Marker key={`stop-${index}`} position={[stop.lat, stop.long]}>
-                            <Tooltip permanent direction="top" offset={[0, -14]}>
+                        <CircleMarker
+                            key={`stop-${index}`}
+                            center={[stop.lat, stop.long]}
+                            radius={8}
+                            pathOptions={{
+                                color: routeColors[index % routeColors.length],
+                                fillColor: routeColors[index % routeColors.length],
+                                fillOpacity: 0.9,
+                                weight: 2,
+                            }}
+                        >
+                            <Tooltip permanent direction="top" offset={[0, -10]}>
                                 {String.fromCharCode("A".charCodeAt(0) + index)}
                             </Tooltip>
-                        </Marker>
+                        </CircleMarker>
                     ) : null
                 )}
 
