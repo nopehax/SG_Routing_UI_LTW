@@ -249,7 +249,7 @@ export default function SidePanel(props: {
                     <input
                         type="range"
                         min={50}
-                        max={2000}
+                        max={20000}
                         step={50}
                         value={props.blockageRadius}
                         onChange={(e) => props.setBlockageRadius(Number(e.target.value))}
