@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MapView from "./components/MapView";
 import SidePanel from "./components/SidePanel";
 import type { GeoJson, Point, ReadyState, TravelMode } from "./types";
@@ -13,7 +13,7 @@ import {
   getValidAxisTypes,
 } from "./api";
 
-type PickMode = "blockage" | null;
+type PickMode = "start" | "end" | "blockage" | null;
 
 function stopLabel(index: number): string {
   const base = "A".charCodeAt(0);
@@ -148,6 +148,8 @@ export default function App() {
   const [deletingBlockageName, setDeletingBlockageName] = useState<string | null>(null);
 
   const blockageNames = useMemo(() => extractBlockageNames(blockages), [blockages]);
+  const allStopsSet = stops.length >= 2 && stops.every(Boolean);
+  const prevAllStopsSet = useRef(allStopsSet);
 
   const [error, setError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -222,6 +224,15 @@ export default function App() {
     };
   }, [ready, mode, presetAxisTypes]);
 
+  useEffect(() => {
+    if (!prevAllStopsSet.current && allStopsSet) {
+      if (ready === "Ready" && !routing && !blockageError) {
+        void onGetRoute();
+      }
+    }
+    prevAllStopsSet.current = allStopsSet;
+  }, [allStopsSet, ready, routing, blockageError, onGetRoute]);
+
   async function refreshBlockages() {
     const g = await getBlockages();
     setBlockages(g);
@@ -264,6 +275,17 @@ export default function App() {
       setBlockagePoint({ lat, long: lng });
       setPickMode(null);
       return;
+    }
+
+    const nextStopIndex = stops.findIndex((stop) => !stop);
+    if (nextStopIndex !== -1) {
+      setStops((prev) => {
+        const next = [...prev];
+        next[nextStopIndex] = { lat, long: lng };
+        return next;
+      });
+      setRoutes([]);
+      setRouteError(null);
     }
   }
 

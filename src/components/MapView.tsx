@@ -215,10 +215,8 @@ export default function MapView(props: {
                 <ClickHandler
                     pickMode={props.pickMode}
                     onPick={(lat, lng, point) => {
-                        if (props.pickMode) {
-                            props.onPick(lat, lng);
-                            return;
-                        }
+                        props.onPick(lat, lng);
+                        if (props.pickMode) return;
 
                         if (!props.showBlockages || pointBlockages.length === 0) {
                             setSelectedBlockage(null);
