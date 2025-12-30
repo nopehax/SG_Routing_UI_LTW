@@ -177,7 +177,7 @@ export default function App() {
     }
 
     tick();
-    const id = window.setInterval(tick, 2000);
+    const id = window.setInterval(tick, 15000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
