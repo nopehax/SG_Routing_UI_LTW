@@ -101,6 +101,10 @@ function parseBlockageRadiusMeters(props: any): number | null {
   return Number.isFinite(radius) ? radius : null;
 }
 
+function normalizeAxisTypes(value: unknown): string[] {
+  return Array.isArray(value) ? value : [];
+}
+
 function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const r = 6371000;
   const dLat = ((bLat - aLat) * Math.PI) / 180;
@@ -180,24 +184,47 @@ export default function App() {
   }, [stops, blockages]);
   const panelError = [error, blockageError].filter(Boolean).join(" ") || null;
 
-  // Poll /ready
+  // Poll /ready with Fibonacci backoff when not ready.
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: number | null = null;
+    let fibA = 1;
+    let fibB = 1;
+    const readyPollMs = 15000;
+
+    function scheduleNext(ms: number) {
+      if (cancelled) return;
+      timeoutId = window.setTimeout(tick, ms);
+    }
 
     async function tick() {
       try {
         const r = await getReady();
-        if (!cancelled) setReady(r);
+        if (cancelled) return;
+        setReady(r);
+
+        if (r === "Ready") {
+          fibA = 1;
+          fibB = 1;
+          scheduleNext(readyPollMs);
+          return;
+        }
       } catch {
-        if (!cancelled) setReady("Unknown");
+        if (cancelled) return;
+        setReady("Unknown");
       }
+
+      const nextDelaySec = fibA;
+      const next = fibA + fibB;
+      fibA = fibB;
+      fibB = next;
+      scheduleNext(nextDelaySec * 1000);
     }
 
     tick();
-    const id = window.setInterval(tick, 15000);
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
     };
   }, []);
 
@@ -207,7 +234,7 @@ export default function App() {
     (async () => {
       try {
         const v = await getValidAxisTypes();
-        if (!cancelled) setActiveAxisTypes(v);
+        if (!cancelled) setActiveAxisTypes(normalizeAxisTypes(v));
       } catch {
         // ignore
       }
@@ -228,7 +255,7 @@ export default function App() {
       setRoutes([]); // clear stale routes when mode changes
       try {
         const v = await changeValidRoadTypes(presetAxisTypes);
-        if (!cancelled) setActiveAxisTypes(v);
+        if (!cancelled) setActiveAxisTypes(normalizeAxisTypes(v));
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Failed to apply travel mode preset.");
       } finally {
@@ -252,7 +279,7 @@ export default function App() {
 
   async function refreshBlockages() {
     const g = await getBlockages();
-    setBlockages((prev) => {
+    setBlockages((prev: GeoJson | null) => {
       if (!isValidGeoJson(g)) return prev;
       return areBlockagesEqual(prev, g) ? prev : g;
     });
@@ -293,7 +320,7 @@ export default function App() {
       try {
         const g = await getBlockages();
         if (!cancelled) {
-          setBlockages((prev) => {
+          setBlockages((prev: GeoJson | null) => {
             if (!isValidGeoJson(g)) return prev;
             return areBlockagesEqual(prev, g) ? prev : g;
           });
@@ -407,10 +434,11 @@ export default function App() {
     setRoutes([]);
     try {
       // Ensure preset is applied (in case user clicked quickly)
-      if (activeAxisTypes.join("|") !== presetAxisTypes.join("|")) {
+      const activeAxisKey = normalizeAxisTypes(activeAxisTypes).join("|");
+      if (activeAxisKey !== presetAxisTypes.join("|")) {
         setApplyingPreset(true);
         const v = await changeValidRoadTypes(presetAxisTypes);
-        setActiveAxisTypes(v);
+        setActiveAxisTypes(normalizeAxisTypes(v));
         setApplyingPreset(false);
       }
 
