@@ -423,6 +423,33 @@ export default function App() {
     }
   }
 
+  async function refreshBlockagesUntilRemoved(expectedName: string) {
+    const maxAttempts = 10;
+    const delayMs = 500;
+    const trimmedName = expectedName.trim();
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const g = await getBlockages();
+      if (!isValidGeoJson(g)) {
+        await sleep(delayMs);
+        continue;
+      }
+
+      const names = extractBlockageNames(g);
+      const hasExpected = trimmedName.length > 0 && names.includes(trimmedName);
+      const changed = !areBlockagesEqual(blockages, g);
+
+      if (!hasExpected && changed) {
+        setBlockages(g);
+        return true;
+      }
+
+      await sleep(delayMs);
+    }
+
+    return false;
+  }
+
   function onSetPickMode(next: PickMode) {
     setPickMode(next);
     if (next) setPickStopIndex(null);
@@ -584,8 +611,12 @@ export default function App() {
     setDeletingBlockageName(name);
     try {
       await deleteBlockage(name);
-      await refreshBlockages();
-      pushToast("success", "Blockage deleted.");
+      const updated = await refreshBlockagesUntilRemoved(name);
+      if (!updated) {
+        setError("Blockage deleted, but list did not update yet. Please try again.");
+      } else {
+        pushToast("success", "Blockage deleted.");
+      }
     } catch (e: any) {
       setError(e?.message ?? "Failed to delete blockage.");
     } finally {
