@@ -23,7 +23,6 @@ export default function SidePanel(props: {
     routing: boolean;
     routeBlocked: boolean;
     routeBlockedReason: string | null;
-    routeError: string | null;
 
     onGetRoute: () => void;
 
@@ -46,7 +45,6 @@ export default function SidePanel(props: {
     deletingBlockageName: string | null;
     onDeleteBlockage: (name: string) => void;
 
-    error: string | null;
 }) {
     const allStopsSet = props.stops.length >= 2 && props.stops.every(Boolean);
     const canRoute =
@@ -198,18 +196,15 @@ export default function SidePanel(props: {
                     {props.routing ? "Routing…" : "Get route"}
                 </button>
 
-                {(props.routeError || !canRoute) && (
+                {!canRoute && (
                     <div className="subtle">
-                        {props.routeError
-                            ? props.routeError
-                            : props.ready !== "Ready"
-                                ? "Waiting for server to be ready."
-                                : !allStopsSet
-                                    ? "Pick all stops on the map."
-                                    : null}
+                        {props.ready !== "Ready"
+                            ? "Waiting for server to be ready."
+                            : !allStopsSet
+                                ? "Pick all stops on the map."
+                                : null}
                     </div>
                 )}
-                {props.error && <div className="errorBox">{props.error}</div>}
             </section>
 
             <section className="card">

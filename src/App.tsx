@@ -174,6 +174,13 @@ export default function App() {
 
   const [error, setError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Array<{ id: number; kind: "error" | "warning" | "success"; message: string }>>(
+    []
+  );
+  const toastIdRef = useRef(1);
+  const prevErrorRef = useRef<string | null>(null);
+  const prevRouteErrorRef = useRef<string | null>(null);
+  const prevBlockageErrorRef = useRef<string | null>(null);
   const blockageError = useMemo(() => {
     for (let i = 0; i < stops.length; i += 1) {
       if (isPointInsideBlockage(stops[i], blockages)) {
@@ -182,7 +189,6 @@ export default function App() {
     }
     return null;
   }, [stops, blockages]);
-  const panelError = [error, blockageError].filter(Boolean).join(" ") || null;
 
   // Poll /ready with Fibonacci backoff when not ready.
   useEffect(() => {
@@ -227,6 +233,35 @@ export default function App() {
       if (timeoutId != null) window.clearTimeout(timeoutId);
     };
   }, []);
+
+  function pushToast(kind: "error" | "warning" | "success", message: string) {
+    const id = toastIdRef.current++;
+    setToasts((prev) => [...prev, { id, kind, message }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }
+
+  useEffect(() => {
+    if (error && error !== prevErrorRef.current) {
+      pushToast("error", error);
+    }
+    prevErrorRef.current = error;
+  }, [error]);
+
+  useEffect(() => {
+    if (routeError && routeError !== prevRouteErrorRef.current) {
+      pushToast("error", routeError);
+    }
+    prevRouteErrorRef.current = routeError;
+  }, [routeError]);
+
+  useEffect(() => {
+    if (blockageError && blockageError !== prevBlockageErrorRef.current) {
+      pushToast("warning", blockageError);
+    }
+    prevBlockageErrorRef.current = blockageError;
+  }, [blockageError]);
 
   // Load server axis types once (optional)
   useEffect(() => {
@@ -433,6 +468,8 @@ export default function App() {
     setRouteError(null);
     setRoutes([]);
     try {
+      let addedSegments = 0;
+      let hadRouteIssue = false;
       // Ensure preset is applied (in case user clicked quickly)
       const activeAxisKey = normalizeAxisTypes(activeAxisTypes).join("|");
       if (activeAxisKey !== presetAxisTypes.join("|")) {
@@ -453,14 +490,20 @@ export default function App() {
         });
         if (!isValidGeoJson(geo)) {
           setRouteError(`Route segment ${stopLabel(i)} → ${stopLabel(i + 1)} is invalid.`);
+          hadRouteIssue = true;
           break;
         }
         if (!hasRouteGeometry(geo)) {
           setRouteError("Route not found.");
+          hadRouteIssue = true;
           break;
         }
 
         setRoutes((prev) => [...prev, geo]);
+        addedSegments += 1;
+      }
+      if (!hadRouteIssue && addedSegments > 0) {
+        pushToast("success", "Routing completed.");
       }
     } catch (e: any) {
       setError(e?.message ?? "Routing failed.");
@@ -498,6 +541,8 @@ export default function App() {
       const updated = await refreshBlockagesUntilUpdated(expectedName);
       if (!updated) {
         setError("Blockage added, but list did not update yet. Please try again.");
+      } else {
+        pushToast("success", "Blockage added.");
       }
 
       // reset
@@ -520,6 +565,7 @@ export default function App() {
     try {
       await deleteBlockage(name);
       await refreshBlockages();
+      pushToast("success", "Blockage deleted.");
     } catch (e: any) {
       setError(e?.message ?? "Failed to delete blockage.");
     } finally {
@@ -547,7 +593,6 @@ export default function App() {
         onGetRoute={onGetRoute}
         routeBlocked={!!blockageError}
         routeBlockedReason={blockageError}
-        routeError={routeError}
         showBlockages={showBlockages}
         onToggleBlockages={() => setShowBlockages((s) => !s)}
         blockagePoint={blockagePoint}
@@ -563,7 +608,6 @@ export default function App() {
         blockageNames={blockageNames}
         deletingBlockageName={deletingBlockageName}
         onDeleteBlockage={onDeleteBlockage}
-        error={panelError}
       />
 
       <main className="main">
@@ -577,6 +621,25 @@ export default function App() {
           onPick={onPick}
         />
       </main>
+      <div className="toastContainer" aria-live="polite" aria-atomic="false">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`toast ${toast.kind}`}
+            role={toast.kind === "error" ? "alert" : "status"}
+          >
+            <span>{toast.message}</span>
+            <button
+              className="toastClose"
+              type="button"
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              aria-label="Dismiss message"
+            >
+              x
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

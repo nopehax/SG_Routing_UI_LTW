@@ -360,3 +360,59 @@ button.active {
     width: 16px;
     height: 16px;
 }
+
+.toastContainer {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 900;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    min-width: 260px;
+    max-width: 420px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(31, 41, 51, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.toast.error {
+    border-color: rgba(198, 40, 40, 0.6);
+    background: rgba(255, 238, 238, 0.95);
+    color: #8e1717;
+}
+
+.toast.warning {
+    border-color: rgba(245, 159, 0, 0.6);
+    background: rgba(255, 244, 222, 0.95);
+    color: #8a5200;
+}
+
+.toast.success {
+    border-color: rgba(46, 125, 50, 0.6);
+    background: rgba(227, 246, 232, 0.95);
+    color: #1e5e2a;
+}
+
+.toastClose {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
