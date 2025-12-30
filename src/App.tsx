@@ -7,6 +7,7 @@ import {
   addBlockage,
   changeValidRoadTypes,
   deleteBlockage,
+  getAxisType,
   getBlockages,
   getReady,
   getRoute,
@@ -160,6 +161,8 @@ export default function App() {
 
   const [showBlockages, setShowBlockages] = useState(true);
   const [blockages, setBlockages] = useState<GeoJson | null>(null);
+  const [showAxisPaths, setShowAxisPaths] = useState(false);
+  const [axisPaths, setAxisPaths] = useState<GeoJson[]>([]);
 
   const [blockagePoint, setBlockagePoint] = useState<{ lat: number; long: number } | null>(null);
   const [blockageName, setBlockageName] = useState("");
@@ -174,10 +177,11 @@ export default function App() {
 
   const [error, setError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Array<{ id: number; kind: "error" | "warning" | "success"; message: string }>>(
-    []
-  );
+  const [toasts, setToasts] = useState<
+    Array<{ id: number; kind: "error" | "warning" | "success"; message: string; durationMs: number | null }>
+  >([]);
   const toastIdRef = useRef(1);
+  const axisPathsToastIdRef = useRef<number | null>(null);
   const prevErrorRef = useRef<string | null>(null);
   const prevRouteErrorRef = useRef<string | null>(null);
   const prevBlockageErrorRef = useRef<string | null>(null);
@@ -234,12 +238,19 @@ export default function App() {
     };
   }, []);
 
-  function pushToast(kind: "error" | "warning" | "success", message: string) {
+  function pushToast(kind: "error" | "warning" | "success", message: string, durationMs = 5000): number {
     const id = toastIdRef.current++;
-    setToasts((prev) => [...prev, { id, kind, message }]);
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 5000);
+    setToasts((prev) => [...prev, { id, kind, message, durationMs }]);
+    if (durationMs != null) {
+      window.setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, durationMs);
+    }
+    return id;
+  }
+
+  function dismissToast(id: number) {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
   useEffect(() => {
@@ -302,6 +313,49 @@ export default function App() {
       cancelled = true;
     };
   }, [ready, mode, presetAxisTypes]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAxisPaths() {
+      if (!showAxisPaths) {
+        setAxisPaths([]);
+        if (axisPathsToastIdRef.current != null) {
+          dismissToast(axisPathsToastIdRef.current);
+          axisPathsToastIdRef.current = null;
+        }
+        return;
+      }
+
+      const axisTypes = MODE_TO_AXIS_TYPES[mode] ?? [];
+      if (axisTypes.length === 0) {
+        setAxisPaths([]);
+        return;
+      }
+
+      if (axisPathsToastIdRef.current == null) {
+        axisPathsToastIdRef.current = pushToast("warning", "Loading paths...", null);
+      }
+
+      try {
+        const results = await Promise.all(axisTypes.map((axisType) => getAxisType(axisType)));
+        if (cancelled) return;
+        setAxisPaths(results.filter((g) => isValidGeoJson(g)));
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load paths.");
+      } finally {
+        if (!cancelled && axisPathsToastIdRef.current != null) {
+          dismissToast(axisPathsToastIdRef.current);
+          axisPathsToastIdRef.current = null;
+        }
+      }
+    }
+
+    void loadAxisPaths();
+    return () => {
+      cancelled = true;
+    };
+  }, [showAxisPaths, mode]);
 
   useEffect(() => {
     if (!prevAllStopsSet.current && allStopsSet) {
@@ -640,6 +694,8 @@ export default function App() {
         pickMode={pickMode}
         setPickMode={onSetPickMode}
         applyingPreset={applyingPreset}
+        showAxisPaths={showAxisPaths}
+        onToggleAxisPaths={() => setShowAxisPaths((prev) => !prev)}
         routing={routing}
         onGetRoute={onGetRoute}
         routeBlocked={!!blockageError}
@@ -665,6 +721,7 @@ export default function App() {
         <MapView
           stops={stops}
           routes={routes}
+          axisPaths={axisPaths}
           blockages={blockages}
           showBlockages={showBlockages}
           blockagePoint={blockagePoint}
@@ -683,7 +740,7 @@ export default function App() {
             <button
               className="toastClose"
               type="button"
-              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              onClick={() => dismissToast(toast.id)}
               aria-label="Dismiss message"
             >
               x

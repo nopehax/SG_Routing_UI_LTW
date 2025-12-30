@@ -90,3 +90,7 @@ export async function deleteBlockage(name: string): Promise<void> {
         method: "DELETE",
     });
 }
+
+export async function getAxisType(axisType: string): Promise<GeoJson> {
+    return request<GeoJson>(`/axisType/${encodeURIComponent(axisType)}`);
+}

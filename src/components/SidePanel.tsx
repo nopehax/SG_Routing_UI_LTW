@@ -20,6 +20,8 @@ export default function SidePanel(props: {
     setPickMode: (m: PickMode) => void;
 
     applyingPreset: boolean;
+    showAxisPaths: boolean;
+    onToggleAxisPaths: () => void;
     routing: boolean;
     routeBlocked: boolean;
     routeBlockedReason: string | null;
@@ -132,6 +134,10 @@ export default function SidePanel(props: {
                     </button>
                 </div>
 
+                <label className="toggleRow" style={{ marginTop: 10 }}>
+                    <input type="checkbox" checked={props.showAxisPaths} onChange={props.onToggleAxisPaths} />
+                    Show path
+                </label>
                 <div className="subtle">Select one.</div>
             </section>
 

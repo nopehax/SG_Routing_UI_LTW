@@ -104,6 +104,7 @@ function createColoredMarkerIcon(color: string): L.Icon {
 export default function MapView(props: {
     stops: Array<Point | null>;
     routes: GeoJson[];
+    axisPaths: GeoJson[];
     blockages: GeoJson | null;
     showBlockages: boolean;
     blockagePoint: { lat: number; long: number } | null;
@@ -189,6 +190,10 @@ export default function MapView(props: {
     const routeDisplays = useMemo(
         () => props.routes.map((r) => stripPointFeatures(r)).filter(Boolean) as GeoJson[],
         [props.routes]
+    );
+    const axisPathDisplays = useMemo(
+        () => props.axisPaths.map((r) => stripPointFeatures(r)).filter(Boolean) as GeoJson[],
+        [props.axisPaths]
     );
     const blockagesKey = useMemo(
         () => (props.blockages ? JSON.stringify(props.blockages) : "none"),
@@ -304,6 +309,14 @@ export default function MapView(props: {
                         key={`route-${index}`}
                         data={route as any}
                         style={{ ...routeStyle, color: routeColors[index % routeColors.length] } as any}
+                    />
+                ))}
+
+                {axisPathDisplays.map((route, index) => (
+                    <GeoJSON
+                        key={`axis-${index}`}
+                        data={route as any}
+                        style={{ weight: 2, opacity: 0.35, color: "#394b59" } as any}
                     />
                 ))}
 
