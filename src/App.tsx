@@ -370,6 +370,26 @@ export default function App() {
     };
   }, [showBlockages]);
 
+  // Poll blockages every 10s to keep list/map up to date.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        await refreshBlockages();
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load blockages.");
+      }
+    }
+
+    tick();
+    const id = window.setInterval(tick, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
   function onPick(lat: number, lng: number) {
     setError(null);
 

@@ -306,7 +306,7 @@ export default function SidePanel(props: {
                 </div>
             </section>
 
-            <div className="footerNote">Tip: click “Pick” then click on the map.</div>
+            <div className="footerNote">Tip: Just click on the map.</div>
         </aside>
     );
 }
