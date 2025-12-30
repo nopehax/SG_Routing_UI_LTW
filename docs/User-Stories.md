@@ -59,7 +59,14 @@ Acceptance criteria:
 - The button shows the current style.
 - After refreshing the page, the same style is still selected.
 
-## US-09 Add a blockage
+## US-09 Show axis paths for a travel mode
+As a route planner, I want to show paths for the current travel mode so that I can see the available network.
+
+Acceptance criteria:
+- When the "Show Paths" checkbox is checked, the mode's paths appear on the map after a loading toast.
+- When unchecked, the paths are hidden.
+
+## US-10 Add a blockage
 As a route planner, I want to add a blockage on the map so that I can avoid certain areas.
 
 Acceptance criteria:
@@ -67,7 +74,7 @@ Acceptance criteria:
 - While the blockage is being added, the button shows a spinner and is disabled.
 - After adding, the new blockage appears in the list and on the map.
 
-## US-10 Show and delete blockages
+## US-11 Show and delete blockages
 As a route planner, I want to view and remove existing blockages so that I can maintain an accurate blockage list.
 
 Acceptance criteria:
@@ -75,17 +82,17 @@ Acceptance criteria:
 - I can delete a blockage and see it removed from the list and map.
 - I can toggle blockage visibility on or off on the map.
 
-## US-11 View blockage details
+## US-12 View blockage details
 As a route planner, I want to click a blockage area to see details so that I can know additional information.
 
 Acceptance criteria:
 - Clicking within a blockage shows its name, radius, and description.
 - Clicking elsewhere hides the details.
 
-## US-12 Errors are visible and actionable
-As a route planner, I want clear error messages when routing or blockages fail so that I can fix issues quickly.
+## US-13 Errors and success messages are visible and actionable
+As a route planner, I want clear toast messages for errors and success so that I can understand what happened quickly.
 
 Acceptance criteria:
-- Routing errors appear in the route panel.
+- Error and success toasts appear at the bottom center of the screen.
 - Blockage add/delete errors appear without clearing my current list.
-- Errors use plain language and tell me what went wrong.
+- Messages use plain language and tell me what happened.
