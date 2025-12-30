@@ -35,6 +35,7 @@ export default function SidePanel(props: {
     blockageName: string;
     blockageDesc: string;
     blockageRadius: number;
+    addingBlockage: boolean;
     setBlockageName: (v: string) => void;
     setBlockageDesc: (v: string) => void;
     setBlockageRadius: (v: number) => void;
@@ -52,7 +53,10 @@ export default function SidePanel(props: {
         props.ready === "Ready" && allStopsSet && !props.routing && !props.routeBlocked;
 
     const canAddBlockage =
-        props.ready === "Ready" && !!props.blockagePoint && props.blockageName.trim().length > 0;
+        props.ready === "Ready" &&
+        !!props.blockagePoint &&
+        props.blockageName.trim().length > 0 &&
+        !props.addingBlockage;
 
     return (
         <aside className="panel">
@@ -256,7 +260,8 @@ export default function SidePanel(props: {
                     />
 
                     <button className="primary" disabled={!canAddBlockage} onClick={props.onAddBlockage}>
-                        Add blockage
+                        {props.addingBlockage && <span className="spinner" aria-hidden="true" />}
+                        {props.addingBlockage ? "Adding..." : "Add blockage"}
                     </button>
                 </div>
 

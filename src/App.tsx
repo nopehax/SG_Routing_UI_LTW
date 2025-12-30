@@ -33,6 +33,12 @@ function extractBlockageNames(blockages: any): string[] {
   return Array.from(new Set(names));
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 function isValidGeoJson(data: any): boolean {
   if (!data || typeof data !== "object") return false;
   const type = data.type;
@@ -55,6 +61,16 @@ function isValidGeoJson(data: any): boolean {
   }
 
   return geometryTypes.has(type);
+}
+
+function areBlockagesEqual(a: GeoJson | null, b: GeoJson | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
 }
 
 function hasRouteGeometry(data: any): boolean {
@@ -146,6 +162,7 @@ export default function App() {
   const [blockageDesc, setBlockageDesc] = useState("");
   const [blockageRadius, setBlockageRadius] = useState(200);
   const [deletingBlockageName, setDeletingBlockageName] = useState<string | null>(null);
+  const [addingBlockage, setAddingBlockage] = useState(false);
 
   const blockageNames = useMemo(() => extractBlockageNames(blockages), [blockages]);
   const allStopsSet = stops.length >= 2 && stops.every(Boolean);
@@ -235,7 +252,37 @@ export default function App() {
 
   async function refreshBlockages() {
     const g = await getBlockages();
-    setBlockages(g);
+    setBlockages((prev) => {
+      if (!isValidGeoJson(g)) return prev;
+      return areBlockagesEqual(prev, g) ? prev : g;
+    });
+  }
+
+  async function refreshBlockagesUntilUpdated(expectedName: string) {
+    const maxAttempts = 10;
+    const delayMs = 500;
+    const trimmedName = expectedName.trim();
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const g = await getBlockages();
+      if (!isValidGeoJson(g)) {
+        await sleep(delayMs);
+        continue;
+      }
+
+      const names = extractBlockageNames(g);
+      const hasExpected = trimmedName.length > 0 && names.includes(trimmedName);
+      const changed = !areBlockagesEqual(blockages, g);
+
+      if (hasExpected || changed) {
+        setBlockages(g);
+        return true;
+      }
+
+      await sleep(delayMs);
+    }
+
+    return false;
   }
 
   // Fetch blockages on toggle to refresh overlay/list
@@ -245,7 +292,12 @@ export default function App() {
     (async () => {
       try {
         const g = await getBlockages();
-        if (!cancelled) setBlockages(g);
+        if (!cancelled) {
+          setBlockages((prev) => {
+            if (!isValidGeoJson(g)) return prev;
+            return areBlockagesEqual(prev, g) ? prev : g;
+          });
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Failed to load blockages.");
       }
@@ -404,16 +456,21 @@ export default function App() {
     if (blockageName.trim().length === 0) return;
 
     setError(null);
+    setAddingBlockage(true);
     try {
+      const expectedName = blockageName.trim();
       await addBlockage({
         point: { lat: blockagePoint.lat, long: blockagePoint.long },
         radius: blockageRadius,
-        name: blockageName.trim(),
+        name: expectedName,
         description: blockageDesc.trim(),
       });
 
       // refresh list + overlay
-      await refreshBlockages();
+      const updated = await refreshBlockagesUntilUpdated(expectedName);
+      if (!updated) {
+        setError("Blockage added, but list did not update yet. Please try again.");
+      }
 
       // reset
       setBlockagePoint(null);
@@ -422,6 +479,8 @@ export default function App() {
       setBlockageRadius(200);
     } catch (e: any) {
       setError(e?.message ?? "Failed to add blockage.");
+    } finally {
+      setAddingBlockage(false);
     }
   }
 
@@ -467,6 +526,7 @@ export default function App() {
         blockageName={blockageName}
         blockageDesc={blockageDesc}
         blockageRadius={blockageRadius}
+        addingBlockage={addingBlockage}
         setBlockageName={setBlockageName}
         setBlockageDesc={setBlockageDesc}
         setBlockageRadius={setBlockageRadius}
