@@ -1,6 +1,6 @@
 import { GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import type { GeoJson, Point } from "../types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import L from "leaflet";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
@@ -9,9 +9,11 @@ type PickMode = string | null;
 function ClickHandler(props: {
     pickMode: PickMode;
     onPick: (lat: number, lng: number, point: L.Point) => void;
+    onMapClick?: () => void;
 }) {
     useMapEvents({
         click(e) {
+            props.onMapClick?.();
             props.onPick(e.latlng.lat, e.latlng.lng, e.containerPoint);
         },
     });
@@ -34,6 +36,32 @@ function FitBoundsOnGeoJson({ data }: { data: GeoJson | null }) {
     }, [data, map]);
 
     return null;
+}
+
+function MapAnchoredPanel(props: {
+    lat: number;
+    lng: number;
+    className: string;
+    children: ReactNode;
+}) {
+    const map = useMap();
+    const [, setTick] = useState(0);
+
+    useMapEvents({
+        move() {
+            setTick((v) => v + 1);
+        },
+        zoom() {
+            setTick((v) => v + 1);
+        },
+    });
+
+    const point = map.latLngToContainerPoint([props.lat, props.lng]);
+    return (
+        <div className={props.className} style={{ left: point.x, top: point.y }}>
+            {props.children}
+        </div>
+    );
 }
 
 function stripPointFeatures(data: GeoJson | null): GeoJson | null {
@@ -126,8 +154,13 @@ export default function MapView(props: {
         radius: number | null;
         lat: number;
         lng: number;
-        x: number;
-        y: number;
+    } | null>(null);
+    const [selectedRouteSegment, setSelectedRouteSegment] = useState<{
+        roadName: string | null;
+        roadType: string | null;
+        distance: number | null;
+        lat: number;
+        lng: number;
     } | null>(null);
 
     const routeStyle = useMemo(
@@ -217,6 +250,30 @@ export default function MapView(props: {
     useEffect(() => {
         if (props.pickMode) setSelectedBlockage(null);
     }, [props.pickMode]);
+    useEffect(() => {
+        if (props.pickMode) setSelectedRouteSegment(null);
+    }, [props.pickMode]);
+
+    const routeOnEachFeature = useMemo(() => {
+        return (feature: any, layer: L.Layer) => {
+            if ("on" in layer && typeof (layer as any).on === "function") {
+                (layer as any).on("click", (e: L.LeafletMouseEvent) => {
+                    L.DomEvent.stopPropagation(e);
+                    const props = feature?.properties ?? {};
+                    const roadName = typeof props["road name"] === "string" ? props["road name"] : null;
+                    const roadType = typeof props["road type"] === "string" ? props["road type"] : null;
+                    const distance = typeof props.distance === "number" ? props.distance : null;
+                    setSelectedRouteSegment({
+                        roadName,
+                        roadType,
+                        distance,
+                        lat: e.latlng.lat,
+                        lng: e.latlng.lng,
+                    });
+                });
+            }
+        };
+    }, []);
 
     useEffect(() => {
         try {
@@ -228,6 +285,12 @@ export default function MapView(props: {
 
     return (
         <div className="mapWrap">
+            {props.pickMode && (
+                <div className="mapHint">
+                    Click on the map to set <b>{props.pickMode}</b>.
+                </div>
+            )}
+
             <MapContainer center={sgCenter} zoom={12} className="map">
                 <TileLayer
                     attribution="&copy; OpenStreetMap contributors"
@@ -240,10 +303,12 @@ export default function MapView(props: {
 
                 <ClickHandler
                     pickMode={props.pickMode}
+                    onMapClick={() => setSelectedRouteSegment(null)}
                     onPick={(lat, lng, point) => {
                         props.onPick(lat, lng);
                         if (props.pickMode) return;
 
+                        setSelectedRouteSegment(null);
                         if (!props.showBlockages || pointBlockages.length === 0) {
                             setSelectedBlockage(null);
                             return;
@@ -263,10 +328,8 @@ export default function MapView(props: {
                                     name: String(name),
                                     description: String(desc),
                                     radius,
-                                    lat: bLat,
-                                    lng: bLng,
-                                    x: point.x,
-                                    y: point.y,
+                                    lat,
+                                    lng,
                                 });
                                 return;
                             }
@@ -309,6 +372,7 @@ export default function MapView(props: {
                         key={`route-${index}`}
                         data={route as any}
                         style={{ ...routeStyle, color: routeColors[index % routeColors.length] } as any}
+                        onEachFeature={routeOnEachFeature as any}
                     />
                 ))}
 
@@ -331,29 +395,45 @@ export default function MapView(props: {
                         onEachFeature={blockageOnEachFeature as any}
                     />
                 )}
+
+                {selectedBlockage && !props.pickMode && (
+                    <MapAnchoredPanel
+                        className="blockageDetail"
+                        lat={selectedBlockage.lat}
+                        lng={selectedBlockage.lng}
+                    >
+                        <div className="blockageTitle">{selectedBlockage.name}</div>
+                        <div className="muted">
+                            {selectedBlockage.radius != null ? `Radius: ${selectedBlockage.radius} m` : "Radius: unknown"}
+                        </div>
+                        {selectedBlockage.description.trim().toLowerCase() !== "null" &&
+                            selectedBlockage.description.trim() !== "" && (
+                                <div className="blockageDesc">{selectedBlockage.description}</div>
+                            )}
+                    </MapAnchoredPanel>
+                )}
+
+                {selectedRouteSegment && !props.pickMode && (
+                    <MapAnchoredPanel
+                        className="routeDetail"
+                        lat={selectedRouteSegment.lat}
+                        lng={selectedRouteSegment.lng}
+                    >
+                        <div className="routeTitle">Road segment</div>
+                        <div className="muted">
+                            {selectedRouteSegment.roadName ? `Name: ${selectedRouteSegment.roadName}` : "Name: unknown"}
+                        </div>
+                        <div className="muted">
+                            {selectedRouteSegment.roadType ? `Type: ${selectedRouteSegment.roadType}` : "Type: unknown"}
+                        </div>
+                        <div className="muted">
+                            {selectedRouteSegment.distance != null
+                                ? `Distance: ${selectedRouteSegment.distance} m`
+                                : "Distance: unknown"}
+                        </div>
+                    </MapAnchoredPanel>
+                )}
             </MapContainer>
-
-            {props.pickMode && (
-                <div className="mapHint">
-                    Click on the map to set <b>{props.pickMode}</b>.
-                </div>
-            )}
-
-            {selectedBlockage && !props.pickMode && (
-                <div
-                    className="blockageDetail"
-                    style={{ left: selectedBlockage.x, top: selectedBlockage.y }}
-                >
-                    <div className="blockageTitle">{selectedBlockage.name}</div>
-                    <div className="muted">
-                        {selectedBlockage.radius != null ? `Radius: ${selectedBlockage.radius} m` : "Radius: unknown"}
-                    </div>
-                    {selectedBlockage.description.trim().toLowerCase() !== "null" &&
-                        selectedBlockage.description.trim() !== "" && (
-                            <div className="blockageDesc">{selectedBlockage.description}</div>
-                        )}
-                </div>
-            )}
 
             <button
                 className="mapStyleToggle"

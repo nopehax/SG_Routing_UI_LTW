@@ -342,6 +342,25 @@ button.active {
     color: var(--muted);
 }
 
+.routeDetail {
+    position: absolute;
+    transform: translate(-50%, -110%);
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    max-width: 240px;
+    pointer-events: none;
+    z-index: 600;
+}
+
+.routeTitle {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
 .mapStyleToggle {
     position: absolute;
     right: 12px;

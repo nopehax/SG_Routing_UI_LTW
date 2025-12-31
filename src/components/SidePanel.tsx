@@ -136,7 +136,7 @@ export default function SidePanel(props: {
 
                 <label className="toggleRow" style={{ marginTop: 10 }}>
                     <input type="checkbox" checked={props.showAxisPaths} onChange={props.onToggleAxisPaths} />
-                    Show path
+                    Show path (warning: laggy)
                 </label>
                 <div className="subtle">Select one.</div>
             </section>
