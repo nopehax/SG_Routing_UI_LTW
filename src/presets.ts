@@ -56,7 +56,6 @@ export const MODE_TO_AXIS_TYPES: Record<TravelMode, string[]> = {
         "residential",
         "living_street",
         "road",
-        "service",
     ],
 
     bicycle: [
