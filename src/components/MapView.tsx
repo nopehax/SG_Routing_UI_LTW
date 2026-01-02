@@ -7,14 +7,13 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 type PickMode = string | null;
 
 function ClickHandler(props: {
-    pickMode: PickMode;
-    onPick: (lat: number, lng: number, point: L.Point) => void;
+    onPick: (lat: number, lng: number) => void;
     onMapClick?: () => void;
 }) {
     useMapEvents({
         click(e) {
             props.onMapClick?.();
-            props.onPick(e.latlng.lat, e.latlng.lng, e.containerPoint);
+            props.onPick(e.latlng.lat, e.latlng.lng);
         },
     });
     return null;
@@ -108,9 +107,9 @@ function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number):
     const a =
         sinLat * sinLat +
         Math.cos((aLat * Math.PI) / 180) *
-            Math.cos((bLat * Math.PI) / 180) *
-            sinLng *
-            sinLng;
+        Math.cos((bLat * Math.PI) / 180) *
+        sinLng *
+        sinLng;
     return 2 * r * Math.asin(Math.sqrt(a));
 }
 
@@ -248,10 +247,10 @@ export default function MapView(props: {
     }, [safeBlockages]);
 
     useEffect(() => {
-        if (props.pickMode) setSelectedBlockage(null);
-    }, [props.pickMode]);
-    useEffect(() => {
-        if (props.pickMode) setSelectedRouteSegment(null);
+        if (props.pickMode) {
+            setSelectedBlockage(null);
+            setSelectedRouteSegment(null);
+        }
     }, [props.pickMode]);
 
     const routeOnEachFeature = useMemo(() => {
@@ -302,13 +301,11 @@ export default function MapView(props: {
                 />
 
                 <ClickHandler
-                    pickMode={props.pickMode}
                     onMapClick={() => setSelectedRouteSegment(null)}
-                    onPick={(lat, lng, point) => {
+                    onPick={(lat, lng) => {
                         props.onPick(lat, lng);
                         if (props.pickMode) return;
 
-                        setSelectedRouteSegment(null);
                         if (!props.showBlockages || pointBlockages.length === 0) {
                             setSelectedBlockage(null);
                             return;
@@ -346,9 +343,9 @@ export default function MapView(props: {
                             position={[stop.lat, stop.long]}
                             icon={
                                 markerIcons[
-                                    index < props.stops.length - 1
-                                        ? index % markerIcons.length
-                                        : Math.max(0, index - 1) % markerIcons.length
+                                index < props.stops.length - 1
+                                    ? index % markerIcons.length
+                                    : Math.max(0, index - 1) % markerIcons.length
                                 ]
                             }
                         >

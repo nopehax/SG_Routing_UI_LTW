@@ -374,33 +374,6 @@ export default function App() {
     });
   }
 
-  async function refreshBlockagesUntilUpdated(expectedName: string) {
-    const maxAttempts = 10;
-    const delayMs = 500;
-    const trimmedName = expectedName.trim();
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const g = await getBlockages();
-      if (!isValidGeoJson(g)) {
-        await sleep(delayMs);
-        continue;
-      }
-
-      const names = extractBlockageNames(g);
-      const hasExpected = trimmedName.length > 0 && names.includes(trimmedName);
-      const changed = !areBlockagesEqual(blockages, g);
-
-      if (hasExpected || changed) {
-        setBlockages(g);
-        return true;
-      }
-
-      await sleep(delayMs);
-    }
-
-    return false;
-  }
-
   // Fetch blockages on toggle to refresh overlay/list
   useEffect(() => {
     let cancelled = false;
@@ -705,7 +678,6 @@ export default function App() {
         routing={routing}
         onGetRoute={onGetRoute}
         routeBlocked={!!blockageError}
-        routeBlockedReason={blockageError}
         showBlockages={showBlockages}
         onToggleBlockages={() => setShowBlockages((s) => !s)}
         blockagePoint={blockagePoint}

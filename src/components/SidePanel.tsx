@@ -24,7 +24,6 @@ export default function SidePanel(props: {
     onToggleAxisPaths: () => void;
     routing: boolean;
     routeBlocked: boolean;
-    routeBlockedReason: string | null;
 
     onGetRoute: () => void;
 
