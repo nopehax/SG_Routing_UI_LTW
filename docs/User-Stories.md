@@ -22,7 +22,15 @@ Acceptance criteria:
 - If a route cannot be found for a segment, I see a clear "Route not found" message.
 - If a stop is inside a blocked area, I see a warning and routing does not proceed.
 
-## US-04 Auto-pick stops on map click
+## US-04 View route segment details
+As a route planner, I want to click a route segment so that I can see road details.
+
+Acceptance criteria:
+- Clicking a route line shows road name, road type, and distance when available.
+- The details panel stays anchored to the map location while panning or zooming.
+- Clicking elsewhere closes the panel.
+
+## US-05 Auto-pick stops on map click
 As a route planner, I want clicks to set the next unset stop automatically so that I can add stops quickly.
 
 Acceptance criteria:
@@ -30,13 +38,13 @@ Acceptance criteria:
 - If all stops are already set, clicking the map does not change them.
 - I can still use the "Pick" button if I want to choose a specific stop.
 
-## US-05 Auto-route when all stops are set
+## US-06 Auto-route when all stops are set
 As a route planner, I want routing to start automatically when the last stop is set so that I can see results faster.
 
 Acceptance criteria:
 - When I set the last required stop, the route appears automatically.
 
-## US-06 Manage stops
+## US-07 Manage stops
 As a route planner, I want to add, delete, swap, and clear stops so that I can adjust my trip plan.
 
 Acceptance criteria:
@@ -44,12 +52,6 @@ Acceptance criteria:
 - I can remove a stop using the trash icon.
 - I can swap the two stops when only 2 stops are set.
 - I can clear all stops in one action.
-
-## US-07 Stop markers match segment colors
-As a route planner, I want stop markers to match the color of the next route segment so that I can follow the route more easily.
-
-Acceptance criteria:
-- Each stop marker matches the color of the segment that starts there.
 
 ## US-08 Toggle map style and keep preference
 As a route planner, I want to toggle between detailed and simplified map styles and keep my choice so that I can view the map the way I prefer.
@@ -59,11 +61,12 @@ Acceptance criteria:
 - The button shows the current style.
 - After refreshing the page, the same style is still selected.
 
-## US-09 Show axis paths for a travel mode
+## US-09 Show paths for a travel mode
 As a route planner, I want to show paths for the current travel mode so that I can see the available network.
 
 Acceptance criteria:
-- When the "Show Paths" checkbox is checked, the mode's paths appear on the map after a loading toast.
+- A "Show path" checkbox appears under the travel mode buttons.
+- When checked, the mode's paths appear on the map after a loading toast.
 - When unchecked, the paths are hidden.
 
 ## US-10 Add a blockage
