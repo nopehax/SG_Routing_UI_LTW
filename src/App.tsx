@@ -334,7 +334,7 @@ export default function App() {
       }
 
       if (axisPathsToastIdRef.current == null) {
-        axisPathsToastIdRef.current = pushToast("warning", "Loading paths...", null);
+        axisPathsToastIdRef.current = pushToast("warning", "Loading paths...");
       }
 
       try {
@@ -631,20 +631,26 @@ export default function App() {
     setAddingBlockage(true);
     try {
       const expectedName = blockageName.trim();
-      await addBlockage({
+      const response = await addBlockage({
         point: { lat: blockagePoint.lat, long: blockagePoint.long },
         radius: blockageRadius,
         name: expectedName,
         description: blockageDesc.trim(),
       });
 
-      // refresh list + overlay
-      const updated = await refreshBlockagesUntilUpdated(expectedName);
-      if (!updated) {
-        setError("Blockage added, but list did not update yet. Please try again.");
-      } else {
-        pushToast("success", "Blockage added.");
+      if (!isValidGeoJson(response)) {
+        setError("Blockage added, but the response was invalid.");
+        return;
       }
+
+      const names = extractBlockageNames(response);
+      if (!names.includes(expectedName)) {
+        setError("Blockage added, but it did not appear in the updated list.");
+        return;
+      }
+
+      setBlockages(response);
+      pushToast("success", "Blockage added.");
 
       // reset
       setBlockagePoint(null);

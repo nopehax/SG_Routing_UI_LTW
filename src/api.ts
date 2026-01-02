@@ -78,8 +78,8 @@ export async function addBlockage(payload: {
     radius: number;
     name: string;
     description: string;
-}): Promise<void> {
-    await request<void>("/blockage", {
+}): Promise<GeoJson> {
+    return request<GeoJson>("/blockage", {
         method: "POST",
         body: JSON.stringify(payload),
     });
