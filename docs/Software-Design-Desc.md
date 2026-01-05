@@ -1,5 +1,12 @@
 # Software Design Description
 
+## App Specs
+
+- Frontend: React + TypeScript (Vite)
+- Mapping: Leaflet via react-leaflet, GeoJSON for map data
+- Styling: plain CSS
+- API: `https://routing-web-service-ityenzhnyq-an.a.run.app`
+
 ## Decision Reasonings
 
 ### Stop routing on first invalid segment
