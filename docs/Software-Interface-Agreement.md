@@ -26,7 +26,9 @@ Response schema: List of axis types.
 Notes: Used to compare against mode presets.
 
 Example response:
-`["primary_link","pedestrian","tertiary","secondary","tertiary_link","path","bridleway","cycleway","track","service","primary","crossing","secondary_link","footway","unclassified","residential","living_street","road"]`
+```JSON
+["primary_link","pedestrian","tertiary","secondary","tertiary_link","path","bridleway","cycleway","track","service","primary","crossing","secondary_link","footway","unclassified","residential","living_street","road"]
+```
 
 ## 3) GET /allAxisTypes
 Purpose: Retrieve the full list of axis types supported by the server.
@@ -40,13 +42,18 @@ Response schema/type: list of all axis types.
 Notes: Present in the API but not currently used by the client.
 
 Example response:
-`["bridleway","construction","corridor","crossing","cycleway","elevator","footway","living_street","motorway","motorway_link","path","pedestrian","primary","primary_link","proposed","raceway","residential","road","secondary","secondary_link","service","steps","tertiary","tertiary_link","track","trunk","trunk_link","unclassified"]`
+
+```JSON
+["bridleway","construction","corridor","crossing","cycleway","elevator","footway","living_street","motorway","motorway_link","path","pedestrian","primary","primary_link","proposed","raceway","residential","road","secondary","secondary_link","service","steps","tertiary","tertiary_link","track","trunk","trunk_link","unclassified"]
+```
 
 ## 4) POST /changeValidRoadTypes
 Purpose: Apply a set of axis types for routing.
 
-Parameters:
-- `string[]` (array of axis types).
+Body Parameters:
+```JSON
+[<axisType>, <axisType>, <axisType>, ...]
+```
 
 Response format: `string[]`, JSON array.
 
@@ -58,16 +65,21 @@ Example response: (same as payload)
 
 ## 5) POST /route
 Purpose: Get a route between two points.
-Parameters:
-- `RouteRequestBody`:
-  - `startPt`: `{ lat: number, long: number }`
-  - `endPt`: `{ lat: number, long: number }`
+
+Body Parameters:
+```JSON
+{
+    "startPt": { "lat": <number>, "long": <number> },
+    "endPt": { "lat": <number>, "long": <number> }
+}
+```
 
 Response format: GeoJSON.
 
 Response schema: Feature, FeatureCollection, or Geometry.
 
 Notes: If the response contains only points, it is treated as "Route not found."
+
 Example response:
 ```json
 {
@@ -207,11 +219,15 @@ Example response:
 ## 7) POST /blockage
 Purpose: Add a blockage.
 
-Parameters:
-  - `point`: `{ lat: number, long: number }`
-  - `radius`: `number` (meters)
-  - `name`: `string`
-  - `description`: `string`
+Body Parameters:
+```JSON
+{
+    "point": {"lat": <number>, "long": <number>},
+    "radius": <number (metres)>,
+    "name": <name>,
+    "description": <text>
+}
+```
 
 Response format: JSON.
 
@@ -242,8 +258,7 @@ Example response:
 ## 8) DELETE /blockage/{name}
 Purpose: Delete a blockage by name.
 
-Parameters:
-- Path: `name` (URL-encoded string).
+Parameters: None.
 
 Response format: JSON.
 
@@ -261,8 +276,7 @@ Example response:
 ## 9) GET /axisType/{axisType}
 Purpose: Fetch the path network for a specific axis type.
 
-Parameters:
-- Path: `axisType` (string).
+Parameters: None.
 
 Response format: GeoJSON.
 
