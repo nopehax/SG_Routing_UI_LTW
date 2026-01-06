@@ -10,7 +10,7 @@ Parameters: None.
 
 Response format: Plain text
 
-Response schema: (`"Ready" | "Wait"`), may be wrapped in JSON with a `status` field.
+Response schema: (`"Ready" | "Wait"`).
 
 Example response: `"Ready"`
 
