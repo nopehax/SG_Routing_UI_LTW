@@ -56,7 +56,8 @@ export async function getValidAxisTypes(): Promise<string[]> {
 }
 
 export async function changeValidRoadTypes(axisTypes: string[]): Promise<string[]> {
-    return request<string[]>("/changeValidRoadTypes", {
+    const base = "https://nyc-bus-routing-k3q4yvzczq-an.a.run.app";
+    return request<string[]>(`${base}/changeValidRoadTypes`, {
         method: "POST",
         body: JSON.stringify(axisTypes),
     });
